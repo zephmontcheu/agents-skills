@@ -123,8 +123,31 @@ def test_existing_docs_and_legacy_conflict(root: Path) -> None:
   assert not (root / '.agent').exists()
 
 
+def test_refuses_symlink_escapes(root: Path) -> None:
+  repo, outside = root / 'repo', root / 'outside'
+  write(outside, {'secret.txt': 'private'})
+  write(repo, {'go.mod': 'module x\n'})
+  (repo / '.agent' / 'skills').mkdir(parents=True)
+  (repo / '.agent' / 'skills' / 'leak').symlink_to(outside, target_is_directory=True)
+  (repo / 'AGENTS.md').symlink_to(outside / 'planted.md')  # dangling: would create it
+  report = scaffold(repo, consolidate=True)
+  assert not (outside / 'planted.md').exists(), 'wrote through AGENTS.md symlink'
+  assert not (repo / '.agents/skills/leak').exists(), 'copied a symlink target into the repo'
+  assert any('leak' in c for c in report['actions']['legacy_conflicts']), report
+  assert (repo / '.agent').is_dir(), '.agent/ deleted while a symlink was skipped'
+
+  (repo / '.agents').rename(repo / 'real-agents')
+  (repo / '.agents').symlink_to(outside, target_is_directory=True)
+  try:
+    scaffold(repo, flags={'database': 'true'})
+  except SystemExit:
+    pass
+  assert sorted(p.name for p in outside.iterdir()) == ['secret.txt'], 'wrote through .agents symlink'
+
+
 if __name__ == '__main__':
-  for test in (test_python_repo, test_pnpm_monorepo, test_existing_docs_and_legacy_conflict):
+  for test in (test_python_repo, test_pnpm_monorepo, test_existing_docs_and_legacy_conflict,
+               test_refuses_symlink_escapes):
     with tempfile.TemporaryDirectory() as tmp:
       test(Path(tmp))
     print(f'ok  {test.__name__}')

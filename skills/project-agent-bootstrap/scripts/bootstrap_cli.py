@@ -136,6 +136,20 @@ def resolve_target(target_str: str) -> Path:
   return target
 
 
+def check_inside(target: Path, path: Path) -> None:
+  """Refuses to write through a symlink.
+
+  A cloned repo could point `.agents/`, `AGENTS.md`, `.claude/`... at files
+  outside the project; following them would write there.
+  """
+  current = target
+  for part in path.relative_to(target).parts:
+    current = current / part
+    if current.is_symlink():
+      print(f'Error: refusing to write through symlink {current}', file=sys.stderr)
+      sys.exit(1)
+
+
 def visible_subdirs(path: Path) -> list:
   return [
       p for p in sorted(path.iterdir())
@@ -605,19 +619,26 @@ def consolidate_legacy(target: Path, dry_run: bool, actions: dict) -> None:
   different content is a conflict: `.agent/` is then kept for the user to decide.
   """
   legacy = target / '.agent'
+  if legacy.is_symlink():
+    actions['notes'].append('Skipped consolidation: `.agent` is a symlink.')
+    return
   if not legacy.is_dir():
     return
   items = [c for e in sorted(legacy.iterdir())
-           for c in (sorted(e.iterdir()) if e.is_dir() else [e])]
+           for c in (sorted(e.iterdir()) if e.is_dir() and not e.is_symlink() else [e])]
   for item in items:
     rel = item.relative_to(legacy)
     dest = target / '.agents' / rel
-    if not dest.exists():
+    if item.is_symlink():
+      # Copying it would pull in whatever it points at (possibly outside the repo).
+      actions['legacy_conflicts'].append(f'.agent/{rel.as_posix()} (symlink, not copied)')
+    elif not (dest.exists() or dest.is_symlink()):
       actions['consolidated_from_legacy'].append(f'.agents/{rel.as_posix()}')
       if not dry_run:
+        check_inside(target, dest)
         dest.parent.mkdir(parents=True, exist_ok=True)
         if item.is_dir():
-          shutil.copytree(item, dest)
+          shutil.copytree(item, dest, symlinks=True)
         else:
           shutil.copy2(item, dest)
     elif tree_bytes(item) != tree_bytes(dest):
@@ -648,12 +669,13 @@ def link_for_claude(target: Path, names: list, dry_run: bool, actions: dict) -> 
     actions['linked_for_claude'].append(f'.claude/skills/{name}')
     if dry_run:
       continue
+    check_inside(target, link)
     link.parent.mkdir(parents=True, exist_ok=True)
     try:
       link.symlink_to(Path('..', '..', '.agents', 'skills', name),
                       target_is_directory=True)
     except OSError:
-      shutil.copytree(skill, link)
+      shutil.copytree(skill, link, symlinks=True)
 
 
 def resolve_flag(flag: str, auto_value: bool) -> bool:
@@ -689,12 +711,13 @@ def scaffold_target(target_str: str, project_name, wiki_dir, flags: dict,
 
   def deploy(src: Path, dst: Path, templated: bool = False) -> None:
     rel = dst.relative_to(target).as_posix()
-    if dst.exists():
+    if dst.exists() or dst.is_symlink():
       actions['skipped_existing'].append(rel)
       return
     actions['created_files'].append(rel)
     if dry_run:
       return
+    check_inside(target, dst)
     dst.parent.mkdir(parents=True, exist_ok=True)
     if src.is_dir():
       shutil.copytree(src, dst, ignore=shutil.ignore_patterns('__pycache__'))
@@ -735,9 +758,10 @@ def scaffold_target(target_str: str, project_name, wiki_dir, flags: dict,
   }
   for filename, text in rendered.items():
     root_file = target / filename
-    if not root_file.exists():
+    if not (root_file.exists() or root_file.is_symlink()):
       actions['created_files'].append(filename)
       if not dry_run:
+        check_inside(target, root_file)
         root_file.write_text(text, encoding='utf-8')
       continue
     existing_text = read_text(root_file).lower()
@@ -760,6 +784,7 @@ def scaffold_target(target_str: str, project_name, wiki_dir, flags: dict,
     patch_file = dot_agents / 'pending-root-updates.md'
     actions['created_files'].append(patch_file.relative_to(target).as_posix())
     if not dry_run:
+      check_inside(target, patch_file)
       dot_agents.mkdir(exist_ok=True)
       patch_file.write_text(
           '# Pending Root Documentation Sections\n\n'
@@ -776,6 +801,7 @@ def scaffold_target(target_str: str, project_name, wiki_dir, flags: dict,
   if not (target / MANIFEST).exists():
     actions['created_files'].append(MANIFEST.as_posix())
   if not dry_run:
+    check_inside(target, target / MANIFEST)
     dot_agents.mkdir(exist_ok=True)
     (target / MANIFEST).write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
 
