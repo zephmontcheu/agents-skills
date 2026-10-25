@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: python-fastapi-billing
+expected_outcome: |
+  AGENTS.md and CLAUDE.md describe this Python/FastAPI service with its real uv/pytest/alembic commands and concrete architecture, a database safety rule tailored to SQLAlchemy/Alembic is installed, nothing frontend- or JS-specific is added, and Claude Code is wired to load the shared rules.
+context:
+  scaffold_script: place-files.sh

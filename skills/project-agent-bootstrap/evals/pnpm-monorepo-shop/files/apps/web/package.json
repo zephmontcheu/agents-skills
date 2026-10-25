@@ -1,0 +1,19 @@
+{
+  "name": "web",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "test": "vitest run",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.0.3",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "@shop/db": "workspace:*"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "vitest": "^2.1.0"
+  }
+}

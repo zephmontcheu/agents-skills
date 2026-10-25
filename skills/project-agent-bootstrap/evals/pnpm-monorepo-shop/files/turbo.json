@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "build": {},
+    "dev": {
+      "persistent": true
+    },
+    "test": {},
+    "lint": {}
+  }
+}

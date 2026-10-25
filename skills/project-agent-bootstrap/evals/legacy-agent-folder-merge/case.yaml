@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: legacy-agent-folder-merge
+expected_outcome: |
+  Legacy-only items from .agent/ end up in .agents/, the conflicting release-checklist skill is not silently overwritten or deleted (both versions survive and the conflict is reported), the team notes in CLAUDE.md are preserved, and AGENTS.md documents the Go service with its real make/go commands.
+context:
+  scaffold_script: place-files.sh

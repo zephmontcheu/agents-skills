@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: pnpm-monorepo-shop
+expected_outcome: |
+  The frontend UI/UX module targets apps/web, the database rule is tailored to Drizzle/Postgres, all commands use pnpm, the shared skills in .agents/skills are also discoverable by Claude Code, and the root docs have no placeholders.
+context:
+  scaffold_script: place-files.sh
