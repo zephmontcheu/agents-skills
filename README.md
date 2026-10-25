@@ -1,4 +1,4 @@
-# agent-skills
+# agents-skills
 
 Skills that give any repository a shared foundation for AI coding agents: Claude Code, Codex, Cursor, Gemini CLI, Antigravity, Copilot, OpenCode, and others that read `AGENTS.md` and `.agents/`.
 
@@ -12,8 +12,8 @@ Skills that give any repository a shared foundation for AI coding agents: Claude
 With the [`skills`](https://github.com/vercel-labs/skills) CLI, which installs into the right folder for each agent:
 
 ```bash
-npx skills add zephmontcheu/agent-skills                                # pick skills and agents interactively
-npx skills add zephmontcheu/agent-skills --skill project-agent-bootstrap -g -a claude-code   # one skill, globally, for Claude Code
+npx skills add zephmontcheu/agents-skills                                # pick skills and agents interactively
+npx skills add zephmontcheu/agents-skills --skill project-agent-bootstrap -g -a claude-code   # one skill, globally, for Claude Code
 ```
 
 Or by hand: copy `skills/<name>/` into your agent's skills folder, for example `~/.claude/skills/` (Claude Code, global) or `<project>/.agents/skills/` (Codex, Cursor, Gemini CLI, Antigravity).
